@@ -35,10 +35,10 @@ fun CategoryChip(
 
     Surface(
         onClick = onClick,
-        modifier = modifier.defaultMinSize(minHeight = 48.dp),
+        modifier = modifier.defaultMinSize(minHeight = 44.dp),
         shape = CardShape,
-        color = if (isSelected) GlumePrimaryPurpleContainer else GlumeSurfaceCard,
-        border = if (isSelected) BorderStroke(1.5.dp, GlumePrimaryPurple) else BorderStroke(1.dp, GlumeBorder)
+        color = if (isSelected) VitalSensePrimaryContainer else VitalSenseSurface,
+        border = if (isSelected) BorderStroke(1.5.dp, VitalSensePrimary) else BorderStroke(1.dp, VitalSenseBorder)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = Spacing.sm, vertical = Spacing.xs),
@@ -50,7 +50,7 @@ fun CategoryChip(
                 text = categoryName,
                 style = MaterialTheme.typography.bodySmall.copy(
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                    color = if (isSelected) GlumePrimaryPurpleLight else GlumeTextPrimary
+                    color = if (isSelected) VitalSensePrimary else VitalSenseTextPrimary
                 )
             )
         }

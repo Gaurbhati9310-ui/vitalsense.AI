@@ -5,4 +5,45 @@
     <string name="role_asha">ASHA Worker</string>
     <string name="role_doctor">Doctor</string>
     <string name="role_admin">Admin</string>
+
+    <!-- Queue & Appointments Strings -->
+    <string name="queue_title">Live Patient Queue</string>
+    <string name="queue_serving_token">Serving Token</string>
+    <string name="queue_no_active_consultation">No active consultation in progress</string>
+    <string name="queue_call_next">Call Next Patient</string>
+    <string name="queue_add_walkin">Add Walk-in Patient</string>
+    <string name="queue_config_slots">Configure Slots</string>
+    <string name="queue_walkin_open">Walk-ins Open</string>
+    <string name="queue_walkin_closed">Walk-ins Closed</string>
+    <string name="queue_scheduled_badge">Scheduled</string>
+    <string name="queue_walkin_badge">Walk-in</string>
+    <string name="queue_priority_badge">Priority</string>
+    <string name="queue_status_waiting">Waiting</string>
+    <string name="queue_status_called">Called</string>
+    <string name="queue_status_in_consultation">In Consultation</string>
+    <string name="queue_status_completed">Completed</string>
+    <string name="queue_status_no_show">No Show</string>
+    <string name="queue_status_skipped">Skipped</string>
+    <string name="queue_status_cancelled">Cancelled</string>
+
+    <string name="queue_action_start">Start Consultation</string>
+    <string name="queue_action_complete">Complete</string>
+    <string name="queue_action_skip">Skip</string>
+    <string name="queue_action_noshow">No Show</string>
+    <string name="queue_action_prioritize">Prioritize</string>
+    <string name="queue_action_unprioritize">Remove Priority</string>
+
+    <string name="queue_patient_your_token">Your Live Token</string>
+    <string name="queue_patient_confirming_pos">Confirming your position…</string>
+    <string name="queue_patient_ahead">People ahead of you</string>
+    <string name="queue_patient_est_wait">Estimated wait time</string>
+    <string name="queue_patient_cancel_entry">Cancel Queue Position</string>
+    <string name="queue_patient_cancel_confirm">Are you sure you want to give up your spot in today\'s queue?</string>
+    <string name="queue_patient_check_in">Check In for Today</string>
+    <string name="queue_patient_join_walkin">Join Today\'s Walk-in Queue</string>
+
+    <string name="queue_admin_oversight_title">District Queue Oversight</string>
+    <string name="queue_admin_total_waiting">Total Patients Waiting</string>
+    <string name="queue_admin_avg_wait">Average Wait</string>
+    <string name="queue_admin_view_queue">View Live Queue</string>
 </resources>

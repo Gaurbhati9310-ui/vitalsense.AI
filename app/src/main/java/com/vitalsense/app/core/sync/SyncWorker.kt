@@ -68,6 +68,31 @@ class SyncWorker(
                             dao.deleteOutboxRecord(record.id)
                             Log.d(TAG, "✓ Flushed patient record: ${record.entityId}")
                         }
+                        "DOCTOR_SLOT" -> {
+                            val slot = gson.fromJson(record.payloadJson, DoctorDaySlotConfig::class.java)
+                            firestoreDataSource.uploadDoctorSlot(slot)
+                            dao.deleteOutboxRecord(record.id)
+                            Log.d(TAG, "✓ Flushed doctor slot: ${record.entityId}")
+                        }
+                        "QUEUE_ENTRY" -> {
+                            var entry = gson.fromJson(record.payloadJson, QueueEntry::class.java)
+                            if (entry.provisionalToken || entry.tokenNumber <= 0) {
+                                try {
+                                    val realToken = firestoreDataSource.allocateNextToken(entry.doctorId, entry.dateFormatted)
+                                    entry = entry.copy(tokenNumber = realToken, provisionalToken = false, isPendingSync = false)
+                                    // Update Room
+                                    val entity = dao.getQueueEntryById(entry.id)
+                                    if (entity != null) {
+                                        dao.upsertQueueEntry(entity.copy(tokenNumber = realToken, provisionalToken = false, isPendingSync = false))
+                                    }
+                                } catch (e: Exception) {
+                                    // Could not allocate real token yet, will retry
+                                }
+                            }
+                            firestoreDataSource.uploadQueueEntry(entry)
+                            dao.deleteOutboxRecord(record.id)
+                            Log.d(TAG, "✓ Flushed queue entry: ${record.entityId} (Token #${entry.tokenNumber})")
+                        }
                         else -> {
                             dao.deleteOutboxRecord(record.id)
                         }

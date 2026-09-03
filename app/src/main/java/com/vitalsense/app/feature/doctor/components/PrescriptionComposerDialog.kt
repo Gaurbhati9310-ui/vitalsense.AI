@@ -143,10 +143,37 @@ fun PrescriptionComposerDialog(
                         ) {
                             Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                                 Text(
-                                    text = "+ Add Another Medicine",
+                                    text = if (caseId.isNotBlank()) "+ Add Another Medicine (Case #$caseId)" else "+ Add Another Medicine",
                                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                                     color = GlumeTextPrimary
                                 )
+
+                                if (dispensaryStock.isNotEmpty()) {
+                                    Text(
+                                        text = "Available in Dispensary:",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = GlumeTextSecondary
+                                    )
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(Spacing.xxs)
+                                    ) {
+                                        dispensaryStock.take(3).forEach { stock ->
+                                            Surface(
+                                                shape = PillShape,
+                                                color = if (stock.isLowStock) CoralAlert.copy(alpha = 0.15f) else MintGreen.copy(alpha = 0.15f),
+                                                onClick = { newMedName = stock.medicineName }
+                                            ) {
+                                                Text(
+                                                    text = "${stock.medicineName} (${stock.availableQuantity})",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = if (stock.isLowStock) CoralAlert else MintGreen,
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
 
                                 OutlinedTextField(
                                     value = newMedName,

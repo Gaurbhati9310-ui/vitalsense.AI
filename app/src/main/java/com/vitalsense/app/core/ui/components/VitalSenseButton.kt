@@ -12,11 +12,11 @@ import androidx.compose.ui.unit.dp
 import com.vitalsense.app.core.ui.theme.*
 
 enum class ButtonStyle {
-    PRIMARY,   // Glume Single Primary Purple (#7C5CFC) with white text
-    DARK,      // Glume Elevated Slate (#22222F)
-    SECONDARY, // Glume Surface Subtle (#2C2C3C)
-    DANGER,    // Glume Alert Coral (#FF5C5C)
-    OUTLINED   // Transparent with subtle border
+    PRIMARY,   // Healthcare Blue (#0F62FE) with white text
+    DARK,      // Deep Navy Blue (#0043CE)
+    SECONDARY, // Subtle neutral surface (#F1F5F9)
+    DANGER,    // Emergency Red (#DC2626)
+    OUTLINED   // Outlined with 1dp border
 }
 
 @Composable
@@ -30,23 +30,23 @@ fun VitalSenseButton(
     enabled: Boolean = true
 ) {
     val containerColor = when (style) {
-        ButtonStyle.PRIMARY -> GlumePrimaryPurple
-        ButtonStyle.DARK -> GlumeSurfaceElevated
-        ButtonStyle.SECONDARY -> GlumeSurfaceSubtle
-        ButtonStyle.DANGER -> GlumeAlertCoral
+        ButtonStyle.PRIMARY -> VitalSensePrimary
+        ButtonStyle.DARK -> VitalSensePrimaryDark
+        ButtonStyle.SECONDARY -> VitalSenseSurfaceSubtle
+        ButtonStyle.DANGER -> VitalSenseEmergency
         ButtonStyle.OUTLINED -> Color.Transparent
     }
 
     val contentColor = when (style) {
-        ButtonStyle.PRIMARY -> GlumeTextPrimary
-        ButtonStyle.DARK -> GlumeTextPrimary
-        ButtonStyle.SECONDARY -> GlumeTextPrimary
-        ButtonStyle.DANGER -> GlumeTextPrimary
-        ButtonStyle.OUTLINED -> GlumeTextPrimary
+        ButtonStyle.PRIMARY -> Color.White
+        ButtonStyle.DARK -> Color.White
+        ButtonStyle.SECONDARY -> VitalSenseTextPrimary
+        ButtonStyle.DANGER -> Color.White
+        ButtonStyle.OUTLINED -> VitalSensePrimary
     }
 
     val border = if (style == ButtonStyle.OUTLINED) {
-        BorderStroke(1.dp, GlumeBorder)
+        BorderStroke(1.dp, VitalSenseBorder)
     } else null
 
     Button(
@@ -59,8 +59,8 @@ fun VitalSenseButton(
         colors = ButtonDefaults.buttonColors(
             containerColor = containerColor,
             contentColor = contentColor,
-            disabledContainerColor = GlumeSurfaceElevated.copy(alpha = 0.5f),
-            disabledContentColor = GlumeTextTertiary
+            disabledContainerColor = VitalSenseSurfaceSubtle,
+            disabledContentColor = VitalSenseTextTertiary
         ),
         border = border,
         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp)

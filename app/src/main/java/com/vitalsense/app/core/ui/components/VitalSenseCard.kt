@@ -15,9 +15,9 @@ import com.vitalsense.app.core.ui.theme.*
 @Composable
 fun VitalSenseCard(
     modifier: Modifier = Modifier,
-    backgroundColor: Color = GlumeSurfaceCard,
+    backgroundColor: Color = VitalSenseSurface,
     elevation: Dp = 0.dp,
-    border: BorderStroke? = BorderStroke(1.dp, GlumeBorder),
+    border: BorderStroke? = BorderStroke(1.dp, VitalSenseBorder),
     contentPadding: Dp = Spacing.md,
     onClick: (() -> Unit)? = null,
     content: @Composable () -> Unit

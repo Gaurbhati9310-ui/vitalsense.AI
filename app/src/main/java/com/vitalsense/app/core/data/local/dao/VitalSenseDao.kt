@@ -135,5 +135,37 @@ interface VitalSenseDao {
 
     @Query("DELETE FROM outbox_records WHERE id = :id")
     suspend fun deleteOutboxRecord(id: String)
+
+    // --- Live Queue & Doctor Slots ---
+    @Query("SELECT * FROM queue_entries WHERE doctorId = :doctorId AND dateFormatted = :date ORDER BY checkedInAt ASC")
+    fun observeDoctorQueue(doctorId: String, date: String): Flow<List<QueueEntryEntity>>
+
+    @Query("SELECT * FROM queue_entries WHERE patientId = :patientId AND dateFormatted = :date LIMIT 1")
+    fun observePatientQueueEntry(patientId: String, date: String): Flow<QueueEntryEntity?>
+
+    @Query("SELECT * FROM queue_entries WHERE id = :entryId LIMIT 1")
+    suspend fun getQueueEntryById(entryId: String): QueueEntryEntity?
+
+    @Query("SELECT * FROM queue_entries WHERE doctorId = :doctorId AND dateFormatted = :date AND status = 'COMPLETED' ORDER BY completedAt DESC LIMIT :limit")
+    suspend fun getRecentCompletedEntries(doctorId: String, date: String, limit: Int): List<QueueEntryEntity>
+
+    @Query("SELECT * FROM queue_entries WHERE doctorId = :doctorId AND status = 'COMPLETED' ORDER BY completedAt DESC LIMIT :limit")
+    suspend fun getRecentCompletedEntriesAcrossDates(doctorId: String, limit: Int): List<QueueEntryEntity>
+
+    @Query("SELECT * FROM queue_entries WHERE dateFormatted = :date")
+    fun observeAllQueueEntriesForDate(date: String): Flow<List<QueueEntryEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertQueueEntry(entry: QueueEntryEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertQueueEntries(entries: List<QueueEntryEntity>)
+
+    @Query("SELECT * FROM doctor_day_slots WHERE doctorId = :doctorId AND dateFormatted = :date")
+    fun observeDoctorSlots(doctorId: String, date: String): Flow<List<DoctorDaySlotEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertDoctorSlot(slot: DoctorDaySlotEntity)
 }
+
 

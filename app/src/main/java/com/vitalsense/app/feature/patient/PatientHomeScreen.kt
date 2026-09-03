@@ -7,7 +7,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,8 +29,11 @@ fun PatientHomeScreen(
     patient: Patient,
     notices: List<BroadcastNotice> = emptyList(),
     prescriptions: List<Prescription> = emptyList(),
+    activeQueueEntry: QueueEntry? = null,
     onCategoryClick: (ConditionCategory) -> Unit = {},
     onViewHealthCard: () -> Unit = {},
+    onOpenAppointments: () -> Unit = {},
+    onOpenQueueStatus: () -> Unit = {},
     onTriggerSos: () -> Unit = {},
     onSavePrescription: (Prescription) -> Unit = {},
     modifier: Modifier = Modifier
@@ -36,22 +43,17 @@ fun PatientHomeScreen(
     var sosSentSuccess by remember { mutableStateOf(false) }
     var showPrescriptionUploadDialog by remember { mutableStateOf(false) }
 
-    // Toggle to evaluate Glume Dark Mode vs Sunlight High-Contrast Mode for Patient
-    var isSunlightMode by remember { mutableStateOf(false) }
-
     val adminAdvisories = notices.filter {
         it.senderRole == UserRole.ADMIN || it.targetRole == "ALL" || it.targetRole == "PATIENT"
     }
 
     val context = androidx.compose.ui.platform.LocalContext.current
 
-    // Colors dynamically adapt based on Dark vs Sunlight High-Contrast Mode
-    val bgColor = if (isSunlightMode) PatientLightBackground else GlumeBackground
-    val cardBgColor = if (isSunlightMode) PatientLightCard else GlumeSurfaceCard
-    val elevatedBgColor = if (isSunlightMode) PatientLightCardElevated else GlumeSurfaceElevated
-    val cardBorderColor = if (isSunlightMode) PatientLightBorder else GlumeBorder
-    val textPrimaryColor = if (isSunlightMode) PatientLightTextPrimary else GlumeTextPrimary
-    val textSecondaryColor = if (isSunlightMode) PatientLightTextSecondary else GlumeTextSecondary
+    val bgColor = VitalSenseBackground
+    val cardBgColor = VitalSenseSurface
+    val cardBorderColor = VitalSenseBorder
+    val textPrimaryColor = VitalSenseTextPrimary
+    val textSecondaryColor = VitalSenseTextSecondary
 
     LazyColumn(
         modifier = modifier
@@ -61,44 +63,6 @@ fun PatientHomeScreen(
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
         contentPadding = PaddingValues(top = Spacing.sm, bottom = Spacing.xxl)
     ) {
-        // 0. Sunlight vs Dark Mode Evaluation Bar
-        item {
-            Surface(
-                shape = PillShape,
-                color = elevatedBgColor,
-                border = BorderStroke(1.dp, cardBorderColor),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = Spacing.sm, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = if (isSunlightMode) "☀️ Sunlight High-Contrast (Outdoor)" else "🌙 Glume Dark Mode (Standard)",
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                        color = textPrimaryColor
-                    )
-                    Button(
-                        onClick = { isSunlightMode = !isSunlightMode },
-                        shape = PillShape,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = GlumePrimaryPurple,
-                            contentColor = GlumeTextPrimary
-                        ),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                        modifier = Modifier.height(30.dp)
-                    ) {
-                        Text(
-                            text = if (isSunlightMode) "Switch to Dark" else "Test Sunlight",
-                            style = MaterialTheme.typography.labelSmall
-                        )
-                    }
-                }
-            }
-        }
 
         // 1. Personalized Greeting (Glume Bold Headline Style)
         item {
@@ -124,6 +88,131 @@ fun PatientHomeScreen(
                         )
                     }
                     SeverityBadge(severity = patient.currentRiskLevel)
+                }
+            }
+        }
+
+        // Live Queue Active Status Banner (if checked in)
+        if (activeQueueEntry != null && activeQueueEntry.status != QueueEntryStatus.CANCELLED && activeQueueEntry.status != QueueEntryStatus.COMPLETED) {
+            item {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = GlumePrimaryPurple.copy(alpha = 0.2f),
+                    border = BorderStroke(1.5.dp, GlumePrimaryPurple),
+                    onClick = onOpenQueueStatus,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(Spacing.md),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = GlumePrimaryPurple,
+                                modifier = Modifier.size(40.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = if (activeQueueEntry.provisionalToken) "~" else "#${activeQueueEntry.tokenNumber}",
+                                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = GlumeTextPrimary
+                                    )
+                                }
+                            }
+
+                            Column {
+                                Text(
+                                    text = "Your Live Consultation Token",
+                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = textPrimaryColor
+                                )
+                                Text(
+                                    text = "Status: ${activeQueueEntry.status.name} · Dr. ${activeQueueEntry.doctorName}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = textSecondaryColor
+                                )
+                            }
+                        }
+
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = "View Queue",
+                            tint = GlumePrimaryPurple
+                        )
+                    }
+                }
+            }
+        }
+
+        // Appointments & Live Queue Quick Access Row
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = cardBgColor,
+                    border = BorderStroke(1.dp, cardBorderColor),
+                    onClick = onOpenAppointments,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(Spacing.sm),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
+                    ) {
+                        Text("📅", fontSize = 20.sp)
+                        Column {
+                            Text(
+                                text = "Appointments",
+                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                color = textPrimaryColor
+                            )
+                            Text(
+                                text = "Check in & slots",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = textSecondaryColor
+                            )
+                        }
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = cardBgColor,
+                    border = BorderStroke(1.dp, cardBorderColor),
+                    onClick = {
+                        if (activeQueueEntry != null) onOpenQueueStatus() else onOpenAppointments()
+                    },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(Spacing.sm),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
+                    ) {
+                        Text("🔢", fontSize = 20.sp)
+                        Column {
+                            Text(
+                                text = "Live Queue",
+                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                color = textPrimaryColor
+                            )
+                            Text(
+                                text = if (activeQueueEntry != null) "Token #${activeQueueEntry.tokenNumber}" else "Join walk-in",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (activeQueueEntry != null) MintGreen else textSecondaryColor
+                            )
+                        }
+                    }
                 }
             }
         }

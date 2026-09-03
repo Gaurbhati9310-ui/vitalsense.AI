@@ -39,6 +39,18 @@ class Converters {
     fun toCaseStatus(value: String): CaseStatus = runCatching { CaseStatus.valueOf(value) }.getOrDefault(CaseStatus.PENDING_REVIEW)
 
     @TypeConverter
+    fun fromQueueEntrySource(value: QueueEntrySource): String = value.name
+
+    @TypeConverter
+    fun toQueueEntrySource(value: String): QueueEntrySource = runCatching { QueueEntrySource.valueOf(value) }.getOrDefault(QueueEntrySource.SCHEDULED)
+
+    @TypeConverter
+    fun fromQueueEntryStatus(value: QueueEntryStatus): String = value.name
+
+    @TypeConverter
+    fun toQueueEntryStatus(value: String): QueueEntryStatus = runCatching { QueueEntryStatus.valueOf(value) }.getOrDefault(QueueEntryStatus.WAITING)
+
+    @TypeConverter
     fun fromStringList(value: List<String>): String = gson.toJson(value)
 
     @TypeConverter

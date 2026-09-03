@@ -1,0 +1,65 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Patients collection
+    match /patients/{patientId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Condition records (Medical Cases)
+    match /condition_records/{recordId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Prescriptions
+    match /prescriptions/{prescriptionId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Scheduled Appointments
+    match /appointments/{appointmentId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Broadcast Notices & Advisories
+    match /broadcast_notices/{noticeId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // Villages metadata & surveillance
+    match /villages/{villageId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    // Live Queue Entries
+    match /queue_entries/{entryId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        // Doctor / Admin can update status, outcomeNotes, priority
+        request.resource.data.doctorId == resource.data.doctorId ||
+        // Patient can only cancel their own entry
+        (request.resource.data.status == 'CANCELLED' && request.resource.data.patientId == resource.data.patientId)
+      );
+      allow delete: if isAuthenticated();
+    }
+
+    // Doctor Day Slots & Operating Capacity
+    match /doctor_day_slots/{slotId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // Queue Counters for Atomic Token Allocation
+    match /queue_counters/{counterId} {
+      allow read, write: if isAuthenticated();
+    }
+  }
+}

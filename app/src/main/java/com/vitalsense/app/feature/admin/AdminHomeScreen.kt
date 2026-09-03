@@ -6,7 +6,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,6 +29,7 @@ fun AdminHomeScreen(
     notices: List<BroadcastNotice>,
     dispensaryStock: List<DispensaryItem> = emptyList(),
     onSendBroadcast: (title: String, message: String, village: String?) -> Unit,
+    onOpenQueueOversight: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
@@ -65,6 +68,65 @@ fun AdminHomeScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = GlumeTextSecondary
                 )
+            }
+        }
+
+        // Live Queue Oversight Action Card
+        item {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = GlumePrimaryPurple.copy(alpha = 0.2f),
+                border = BorderStroke(1.5.dp, GlumePrimaryPurple),
+                onClick = onOpenQueueOversight,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(Spacing.md),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = GlumePrimaryPurple,
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text("⏱️", fontSize = 18.sp)
+                            }
+                        }
+
+                        Column {
+                            Text(
+                                text = "District Queue & Wait Times",
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = GlumeTextPrimary
+                            )
+                            Text(
+                                text = "Live patient queue lengths & throughput",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = GlumeTextSecondary
+                            )
+                        }
+                    }
+
+                    Button(
+                        onClick = onOpenQueueOversight,
+                        shape = PillShape,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = GlumePrimaryPurple,
+                            contentColor = GlumeTextPrimary
+                        ),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                    ) {
+                        Text("Inspect Queues", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
+                    }
+                }
             }
         }
 
@@ -148,7 +210,7 @@ fun AdminHomeScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(140.dp)
-                            .background(Color(0xFF101018), shape = CardShape)
+                            .background(VitalSenseSurfaceSubtle, shape = CardShape)
                     ) {
                         val canvasWidth = size.width
                         val canvasHeight = size.height
@@ -156,13 +218,13 @@ fun AdminHomeScreen(
                         // Grid lines
                         for (i in 1..3) {
                             drawLine(
-                                color = Color(0xFF222232),
+                                color = VitalSenseBorder,
                                 start = Offset(0f, canvasHeight * (i / 4f)),
                                 end = Offset(canvasWidth, canvasHeight * (i / 4f)),
                                 strokeWidth = 1f
                             )
                             drawLine(
-                                color = Color(0xFF222232),
+                                color = VitalSenseBorder,
                                 start = Offset(canvasWidth * (i / 4f), 0f),
                                 end = Offset(canvasWidth * (i / 4f), canvasHeight),
                                 strokeWidth = 1f
@@ -171,7 +233,7 @@ fun AdminHomeScreen(
 
                         // Radar concentric sweep circles
                         drawCircle(
-                            color = Color(0xFF28283E),
+                            color = VitalSensePrimary.copy(alpha = 0.15f),
                             radius = canvasHeight * 0.45f,
                             center = Offset(canvasWidth / 2f, canvasHeight / 2f),
                             style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1f)

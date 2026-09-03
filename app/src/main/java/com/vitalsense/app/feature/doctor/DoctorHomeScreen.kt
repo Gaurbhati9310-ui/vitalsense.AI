@@ -6,7 +6,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,6 +34,7 @@ fun DoctorHomeScreen(
     allConditions: List<ConditionRecord> = emptyList(),
     allPrescriptions: List<Prescription> = emptyList(),
     onSelectCase: (ConditionRecord) -> Unit,
+    onOpenQueue: () -> Unit = {},
     onAcceptAppointment: (String) -> Unit = {},
     onDeclineAppointment: (String) -> Unit = {},
     onProposeAppointment: (patientId: String, patientName: String, date: String, timeSlot: String) -> Unit = { _, _, _, _ -> },
@@ -51,7 +54,6 @@ fun DoctorHomeScreen(
     val lowStockCount = dispensaryStock.count { it.isLowStock }
 
     val emergencySosAlerts = notices.filter { it.isUrgent && it.senderRole == UserRole.PATIENT }
-    val adminDirectives = notices.filter { it.senderRole == UserRole.ADMIN }
 
     LazyColumn(
         modifier = modifier
@@ -77,6 +79,68 @@ fun DoctorHomeScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = GlumeTextSecondary
                 )
+            }
+        }
+
+        // Live Queue Action Banner
+        item {
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = GlumePrimaryPurple.copy(alpha = 0.2f),
+                border = BorderStroke(1.5.dp, GlumePrimaryPurple),
+                onClick = onOpenQueue,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(Spacing.md),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = GlumePrimaryPurple,
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = "🔢",
+                                    fontSize = 18.sp
+                                )
+                            }
+                        }
+
+                        Column {
+                            Text(
+                                text = "Today's Live Patient Queue",
+                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                                color = GlumeTextPrimary
+                            )
+                            Text(
+                                text = "Call next, manage walk-ins & consult",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = GlumeTextSecondary
+                            )
+                        }
+                    }
+
+                    Button(
+                        onClick = onOpenQueue,
+                        shape = PillShape,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = GlumePrimaryPurple,
+                            contentColor = GlumeTextPrimary
+                        ),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
+                    ) {
+                        Text("Open Queue", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
+                    }
+                }
             }
         }
 

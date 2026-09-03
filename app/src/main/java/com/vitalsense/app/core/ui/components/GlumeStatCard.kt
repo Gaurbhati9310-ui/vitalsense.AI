@@ -17,8 +17,8 @@ import androidx.compose.ui.unit.sp
 import com.vitalsense.app.core.ui.theme.*
 
 /**
- * Glume Stat Display Pattern (from reference screenshot):
- * Compact grid card displaying small icon + label + bold value.
+ * VitalSense Stat Card:
+ * Clean, light-first metric card displaying icon/label + bold value.
  */
 @Composable
 fun GlumeStatCard(
@@ -28,16 +28,16 @@ fun GlumeStatCard(
     modifier: Modifier = Modifier,
     unit: String? = null,
     badgeText: String? = null,
-    badgeColor: Color = GlumePrimaryPurple,
+    badgeColor: Color = VitalSensePrimary,
     onClick: (() -> Unit)? = null
 ) {
     Surface(
         onClick = onClick ?: {},
         enabled = onClick != null,
-        modifier = modifier.defaultMinSize(minHeight = 84.dp),
+        modifier = modifier.defaultMinSize(minHeight = 80.dp),
         shape = StatCardShape,
-        color = GlumeSurfaceCard,
-        border = BorderStroke(1.dp, GlumeBorder),
+        color = VitalSenseSurface,
+        border = BorderStroke(1.dp, VitalSenseBorder),
         shadowElevation = 0.dp
     ) {
         Column(
@@ -55,12 +55,12 @@ fun GlumeStatCard(
                 Text(
                     text = label,
                     style = MaterialTheme.typography.bodySmall,
-                    color = GlumeTextSecondary,
+                    color = VitalSenseTextSecondary,
                     maxLines = 1
                 )
                 Text(
                     text = icon,
-                    fontSize = 16.sp
+                    fontSize = 15.sp
                 )
             }
 
@@ -78,14 +78,14 @@ fun GlumeStatCard(
                 ) {
                     Text(
                         text = value,
-                        style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                        color = GlumeTextPrimary
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        color = VitalSenseTextPrimary
                     )
                     if (unit != null) {
                         Text(
                             text = unit,
                             style = MaterialTheme.typography.bodySmall,
-                            color = GlumeTextSecondary,
+                            color = VitalSenseTextSecondary,
                             modifier = Modifier.padding(bottom = 2.dp)
                         )
                     }
@@ -94,7 +94,7 @@ fun GlumeStatCard(
                 if (badgeText != null) {
                     Surface(
                         shape = PillShape,
-                        color = badgeColor.copy(alpha = 0.2f)
+                        color = badgeColor.copy(alpha = 0.12f)
                     ) {
                         Text(
                             text = badgeText,
@@ -110,22 +110,22 @@ fun GlumeStatCard(
 }
 
 /**
- * Glume Circular Progress Ring Component (from reference screenshot):
+ * VitalSense Circular Progress Ring Component:
  * Renders completion percentage / count inside an arc ring.
  */
 @Composable
 fun GlumeProgressRing(
     progressFraction: Float, // 0.0 to 1.0
-    size: Dp = 68.dp,
-    strokeWidth: Dp = 7.dp,
-    ringColor: Color = GlumeSuccessMint,
-    trackColor: Color = GlumeSurfaceElevated,
+    size: Dp = 64.dp,
+    strokeWidth: Dp = 6.dp,
+    ringColor: Color = VitalSenseSuccess,
+    trackColor: Color = VitalSenseSurfaceSubtle,
     modifier: Modifier = Modifier,
     centerContent: @Composable () -> Unit = {
         Text(
             text = "${(progressFraction * 100).toInt()}%",
             style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-            color = GlumeTextPrimary
+            color = VitalSenseTextPrimary
         )
     }
 ) {

@@ -34,9 +34,9 @@ fun VitalSenseDialog(
                 .fillMaxWidth()
                 .wrapContentHeight(),
             shape = DialogShape,
-            color = GlumeSurfaceCard,
-            shadowElevation = 8.dp,
-            border = BorderStroke(1.dp, GlumeBorder)
+            color = VitalSenseSurface,
+            shadowElevation = 6.dp,
+            border = BorderStroke(1.dp, VitalSenseBorder)
         ) {
             Column(
                 modifier = Modifier
@@ -61,14 +61,14 @@ fun VitalSenseDialog(
                         Column {
                             Text(
                                 text = title,
-                                style = MaterialTheme.typography.titleLarge,
-                                color = GlumeTextPrimary
+                                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                                color = VitalSenseTextPrimary
                             )
                             if (subtitle != null) {
                                 Text(
                                     text = subtitle,
                                     style = MaterialTheme.typography.bodySmall,
-                                    color = GlumeTextSecondary
+                                    color = VitalSenseTextSecondary
                                 )
                             }
                         }
@@ -76,17 +76,17 @@ fun VitalSenseDialog(
 
                     IconButton(
                         onClick = onDismissRequest,
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(32.dp)
                     ) {
                         Text(
                             text = "✕",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = GlumeTextSecondary
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                            color = VitalSenseTextSecondary
                         )
                     }
                 }
 
-                HorizontalDivider(color = GlumeBorder, thickness = 1.dp)
+                HorizontalDivider(color = VitalSenseBorderSubtle, thickness = 1.dp)
 
                 // Body content
                 content()

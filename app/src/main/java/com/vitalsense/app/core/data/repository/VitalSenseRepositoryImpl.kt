@@ -6,12 +6,16 @@ import com.vitalsense.app.core.data.local.entity.*
 import com.vitalsense.app.core.data.local.seed.SeedDataProvider
 import com.vitalsense.app.core.data.model.*
 import com.vitalsense.app.core.data.remote.FirestoreDataSource
+import com.vitalsense.app.core.data.util.QueueEtaCalculator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
 import javax.inject.Inject
 import javax.inject.Singleton
+
 
 @Singleton
 class VitalSenseRepositoryImpl @Inject constructor(
@@ -35,6 +39,9 @@ class VitalSenseRepositoryImpl @Inject constructor(
     private val _notices = MutableStateFlow(SeedDataProvider.initialNotices)
     private val _dispensary = MutableStateFlow(SeedDataProvider.initialDispensaryItems)
     private val _schemes = MutableStateFlow(SeedDataProvider.initialSchemes)
+    private val _queueEntries = MutableStateFlow<List<QueueEntry>>(emptyList())
+    private val _doctorSlots = MutableStateFlow<List<DoctorDaySlotConfig>>(emptyList())
+
 
     init {
         // 1. Pre-seed local Room database on first launch
@@ -572,4 +579,501 @@ class VitalSenseRepositoryImpl @Inject constructor(
         sendNotice(sosNotice)
         return true
     }
-}
+
+    // --- Live Queue & Doctor Slots Implementation ---
+
+    private fun getTodayFormatted(): String {
+        return SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+    }
+
+    override fun observeDoctorQueue(doctorId: String, date: String): Flow<List<QueueEntry>> {
+        // Start listening to Firestore remote stream in background
+        scope.launch {
+            try {
+                firestoreDataSource.observeDoctorQueueStream(doctorId, date).collect { remoteList ->
+                    if (remoteList.isNotEmpty()) {
+                        _queueEntries.update { current ->
+                            val other = current.filterNot { it.doctorId == doctorId && it.dateFormatted == date }
+                            other + remoteList
+                        }
+                        dao.upsertQueueEntries(remoteList.map { it.toEntity() })
+                    }
+                }
+            } catch (e: Exception) {
+                // Offline fallback
+            }
+        }
+
+        return _queueEntries.map { list ->
+            list.filter { it.doctorId == doctorId && it.dateFormatted == date }
+        }.onStart {
+            scope.launch {
+                val cached = dao.observeDoctorQueue(doctorId, date).firstOrNull()
+                if (!cached.isNullOrEmpty()) {
+                    val mapped = cached.map { it.toModel() }
+                    _queueEntries.update { current ->
+                        val other = current.filterNot { it.doctorId == doctorId && it.dateFormatted == date }
+                        other + mapped
+                    }
+                }
+            }
+        }
+    }
+
+    override fun observePatientQueueEntry(patientId: String, date: String): Flow<QueueEntry?> {
+        scope.launch {
+            try {
+                firestoreDataSource.observePatientQueueEntryStream(patientId, date).collect { remoteEntry ->
+                    if (remoteEntry != null) {
+                        _queueEntries.update { current ->
+                            val other = current.filterNot { it.id == remoteEntry.id }
+                            listOf(remoteEntry) + other
+                        }
+                        dao.upsertQueueEntry(remoteEntry.toEntity())
+                    }
+                }
+            } catch (e: Exception) {
+                // Offline fallback
+            }
+        }
+
+        return _queueEntries.map { list ->
+            list.find { it.patientId == patientId && it.dateFormatted == date && it.status != QueueEntryStatus.CANCELLED }
+        }.onStart {
+            scope.launch {
+                val cached = dao.observePatientQueueEntry(patientId, date).firstOrNull()
+                if (cached != null) {
+                    val model = cached.toModel()
+                    _queueEntries.update { current ->
+                        val other = current.filterNot { it.id == model.id }
+                        listOf(model) + other
+                    }
+                }
+            }
+        }
+    }
+
+    override fun observeDoctorSlots(doctorId: String, date: String): Flow<List<DoctorDaySlotConfig>> {
+        scope.launch {
+            try {
+                firestoreDataSource.observeDoctorSlotsStream(doctorId, date).collect { remoteSlots ->
+                    if (remoteSlots.isNotEmpty()) {
+                        _doctorSlots.update { current ->
+                            val other = current.filterNot { it.doctorId == doctorId && it.dateFormatted == date }
+                            other + remoteSlots
+                        }
+                        remoteSlots.forEach { dao.upsertDoctorSlot(it.toEntity()) }
+                    }
+                }
+            } catch (e: Exception) {
+                // Offline fallback
+            }
+        }
+
+        return _doctorSlots.map { list ->
+            list.filter { it.doctorId == doctorId && it.dateFormatted == date }
+        }.onStart {
+            scope.launch {
+                val cached = dao.observeDoctorSlots(doctorId, date).firstOrNull()
+                if (!cached.isNullOrEmpty()) {
+                    val mapped = cached.map { it.toModel() }
+                    _doctorSlots.update { current ->
+                        val other = current.filterNot { it.doctorId == doctorId && it.dateFormatted == date }
+                        other + mapped
+                    }
+                }
+            }
+        }
+    }
+
+    override fun observeAllDoctorQueueSummaries(date: String): Flow<List<DoctorQueueSummary>> {
+        return combine(
+            getDoctors(),
+            _queueEntries,
+            _doctorSlots
+        ) { doctors, entries, slots ->
+            doctors.map { doctor ->
+                val doctorEntries = entries.filter { it.doctorId == doctor.id && it.dateFormatted == date }
+                val waitingCount = doctorEntries.count { it.status == QueueEntryStatus.WAITING }
+                val activeServing = doctorEntries.firstOrNull { it.status == QueueEntryStatus.IN_CONSULTATION }
+                    ?: doctorEntries.firstOrNull { it.status == QueueEntryStatus.CALLED }
+                val completedToday = doctorEntries.filter { it.status == QueueEntryStatus.COMPLETED }
+                val avgWait = QueueEtaCalculator.averageConsultationSeconds(completedToday)
+                val slot = slots.firstOrNull { it.doctorId == doctor.id && it.dateFormatted == date }
+                val isQueueOpen = slot?.isWalkInOpen ?: true
+
+                DoctorQueueSummary(
+                    doctorId = doctor.id,
+                    doctorName = doctor.name,
+                    dateFormatted = date,
+                    waitingCount = waitingCount,
+                    currentToken = activeServing?.tokenNumber,
+                    avgWaitSeconds = avgWait,
+                    isQueueOpen = isQueueOpen
+                )
+            }
+        }
+    }
+
+    override suspend fun defineDoctorSlot(slot: DoctorDaySlotConfig) {
+        _doctorSlots.update { current ->
+            val other = current.filterNot { it.id == slot.id }
+            listOf(slot) + other
+        }
+
+        scope.launch {
+            dao.upsertDoctorSlot(slot.toEntity())
+
+            val outboxId = "outbox_slot_${slot.id}"
+            dao.insertOutboxRecord(
+                OutboxEntity(
+                    id = outboxId,
+                    actionType = "DOCTOR_SLOT",
+                    entityId = slot.id,
+                    payloadJson = gson.toJson(slot)
+                )
+            )
+
+            try {
+                firestoreDataSource.uploadDoctorSlot(slot)
+                dao.deleteOutboxRecord(outboxId)
+            } catch (e: Exception) {
+                syncManager.triggerImmediateSync()
+            }
+        }
+    }
+
+    override suspend fun checkInAppointment(appointmentId: String): QueueEntry {
+        val appointment = _appointments.value.find { it.id == appointmentId }
+            ?: dao.getAllAppointments().firstOrNull()?.find { it.id == appointmentId }?.let {
+                Appointment(
+                    it.id, it.patientId, it.patientName, it.doctorId, it.doctorName,
+                    it.doctorSpecialty, it.dateFormatted, it.timeSlot, it.status, it.proposedBy, it.outcomeNotes
+                )
+            }
+            ?: throw IllegalArgumentException("Appointment with ID $appointmentId not found.")
+
+        val date = getTodayFormatted()
+        val existing = _queueEntries.value.find {
+            it.appointmentId == appointmentId && it.dateFormatted == date && it.status != QueueEntryStatus.CANCELLED
+        }
+        if (existing != null) return existing
+
+        var allocatedToken: Int
+        var isProvisional = false
+
+        try {
+            allocatedToken = firestoreDataSource.allocateNextToken(appointment.doctorId, date)
+        } catch (e: Exception) {
+            // Offline fallback: generate local placeholder token
+            allocatedToken = -(System.currentTimeMillis() % 10000).toInt()
+            isProvisional = true
+        }
+
+        val entry = QueueEntry(
+            id = "qe_${System.currentTimeMillis()}_${appointment.patientId}",
+            doctorId = appointment.doctorId,
+            doctorName = appointment.doctorName,
+            dateFormatted = date,
+            tokenNumber = allocatedToken,
+            provisionalToken = isProvisional,
+            appointmentId = appointment.id,
+            patientId = appointment.patientId,
+            patientName = appointment.patientName,
+            source = QueueEntrySource.SCHEDULED,
+            status = QueueEntryStatus.WAITING,
+            priorityFlag = false,
+            checkedInAt = System.currentTimeMillis(),
+            isPendingSync = isProvisional
+        )
+
+        _queueEntries.update { listOf(entry) + it }
+
+        scope.launch {
+            dao.upsertQueueEntry(entry.toEntity())
+
+            if (isProvisional) {
+                val outboxId = "outbox_queue_${entry.id}"
+                dao.insertOutboxRecord(
+                    OutboxEntity(
+                        id = outboxId,
+                        actionType = "QUEUE_ENTRY",
+                        entityId = entry.id,
+                        payloadJson = gson.toJson(entry)
+                    )
+                )
+                syncManager.triggerImmediateSync()
+            } else {
+                try {
+                    firestoreDataSource.uploadQueueEntry(entry)
+                } catch (e: Exception) {
+                    val outboxId = "outbox_queue_${entry.id}"
+                    dao.insertOutboxRecord(
+                        OutboxEntity(
+                            id = outboxId,
+                            actionType = "QUEUE_ENTRY",
+                            entityId = entry.id,
+                            payloadJson = gson.toJson(entry)
+                        )
+                    )
+                    syncManager.triggerImmediateSync()
+                }
+            }
+        }
+
+        return entry
+    }
+
+    override suspend fun joinWalkInQueue(
+        doctorId: String,
+        patientId: String,
+        patientName: String
+    ): QueueEntry {
+        val doctor = _doctors.value.find { it.id == doctorId }
+            ?: dao.getDoctorById(doctorId).firstOrNull()?.let {
+                Doctor(it.id, it.name, it.specialty, it.qualification, it.hospitalName, it.distanceKm, it.phone, it.availableDays)
+            }
+            ?: throw IllegalArgumentException("Doctor with ID $doctorId not found.")
+
+        val date = getTodayFormatted()
+        val existing = _queueEntries.value.find {
+            it.doctorId == doctorId && it.patientId == patientId && it.dateFormatted == date && it.status != QueueEntryStatus.CANCELLED
+        }
+        if (existing != null) return existing
+
+        var allocatedToken: Int
+        var isProvisional = false
+
+        try {
+            allocatedToken = firestoreDataSource.allocateNextToken(doctorId, date)
+        } catch (e: Exception) {
+            allocatedToken = -(System.currentTimeMillis() % 10000).toInt()
+            isProvisional = true
+        }
+
+        val entry = QueueEntry(
+            id = "qe_${System.currentTimeMillis()}_$patientId",
+            doctorId = doctorId,
+            doctorName = doctor.name,
+            dateFormatted = date,
+            tokenNumber = allocatedToken,
+            provisionalToken = isProvisional,
+            appointmentId = null,
+            patientId = patientId,
+            patientName = patientName,
+            source = QueueEntrySource.WALK_IN,
+            status = QueueEntryStatus.WAITING,
+            priorityFlag = false,
+            checkedInAt = System.currentTimeMillis(),
+            isPendingSync = isProvisional
+        )
+
+        _queueEntries.update { listOf(entry) + it }
+
+        scope.launch {
+            dao.upsertQueueEntry(entry.toEntity())
+
+            val outboxId = "outbox_queue_${entry.id}"
+            dao.insertOutboxRecord(
+                OutboxEntity(
+                    id = outboxId,
+                    actionType = "QUEUE_ENTRY",
+                    entityId = entry.id,
+                    payloadJson = gson.toJson(entry)
+                )
+            )
+
+            if (!isProvisional) {
+                try {
+                    firestoreDataSource.uploadQueueEntry(entry)
+                    dao.deleteOutboxRecord(outboxId)
+                } catch (e: Exception) {
+                    syncManager.triggerImmediateSync()
+                }
+            } else {
+                syncManager.triggerImmediateSync()
+            }
+        }
+
+        return entry
+    }
+
+    override suspend fun callNext(doctorId: String, date: String) {
+        val currentEntries = _queueEntries.value.filter { it.doctorId == doctorId && it.dateFormatted == date }
+        val sortedWaiting = QueueEtaCalculator.sortWaitingEntries(currentEntries)
+
+        if (sortedWaiting.isEmpty()) return
+
+        val nextEntry = sortedWaiting.first()
+        val updated = nextEntry.copy(
+            status = QueueEntryStatus.CALLED,
+            calledAt = System.currentTimeMillis()
+        )
+
+        updateQueueEntryInternal(updated)
+    }
+
+    override suspend fun startConsultation(entryId: String) {
+        val entry = _queueEntries.value.find { it.id == entryId } ?: return
+
+        // Invariant check: ensure no other entry for the same doctor is currently IN_CONSULTATION
+        val activeConsultation = _queueEntries.value.find {
+            it.doctorId == entry.doctorId && it.dateFormatted == entry.dateFormatted &&
+                    it.id != entryId && it.status == QueueEntryStatus.IN_CONSULTATION
+        }
+
+        if (activeConsultation != null) {
+            throw IllegalStateException("Another consultation with Token #${activeConsultation.tokenNumber} is already in progress for Dr. ${entry.doctorName}.")
+        }
+
+        val updated = entry.copy(
+            status = QueueEntryStatus.IN_CONSULTATION,
+            consultationStartedAt = System.currentTimeMillis()
+        )
+
+        updateQueueEntryInternal(updated)
+    }
+
+    override suspend fun completeConsultation(entryId: String, outcomeNotes: String?) {
+        val entry = _queueEntries.value.find { it.id == entryId } ?: return
+        val updated = entry.copy(
+            status = QueueEntryStatus.COMPLETED,
+            completedAt = System.currentTimeMillis(),
+            outcomeNotes = outcomeNotes
+        )
+        updateQueueEntryInternal(updated)
+    }
+
+    override suspend fun markNoShow(entryId: String) {
+        val entry = _queueEntries.value.find { it.id == entryId } ?: return
+        val updated = entry.copy(
+            status = QueueEntryStatus.NO_SHOW
+        )
+        updateQueueEntryInternal(updated)
+    }
+
+    override suspend fun skipEntry(entryId: String) {
+        val entry = _queueEntries.value.find { it.id == entryId } ?: return
+        // If skipped before, mark as NO_SHOW; otherwise re-enter at the back of the queue
+        val isSecondSkip = entry.outcomeNotes?.contains("SKIPPED_ONCE") == true
+        val updated = if (isSecondSkip) {
+            entry.copy(status = QueueEntryStatus.NO_SHOW, outcomeNotes = "Marked No-Show after 2 skips")
+        } else {
+            entry.copy(
+                status = QueueEntryStatus.WAITING,
+                checkedInAt = System.currentTimeMillis(), // moves to back of current tier
+                calledAt = null,
+                priorityFlag = false,
+                outcomeNotes = "SKIPPED_ONCE"
+            )
+        }
+        updateQueueEntryInternal(updated)
+    }
+
+    override suspend fun prioritizeEntry(entryId: String) {
+        val entry = _queueEntries.value.find { it.id == entryId } ?: return
+        val updated = entry.copy(
+            priorityFlag = !entry.priorityFlag
+        )
+        updateQueueEntryInternal(updated)
+    }
+
+    override suspend fun cancelQueueEntry(entryId: String) {
+        val entry = _queueEntries.value.find { it.id == entryId } ?: return
+        val updated = entry.copy(
+            status = QueueEntryStatus.CANCELLED
+        )
+        updateQueueEntryInternal(updated)
+    }
+
+    private fun updateQueueEntryInternal(updated: QueueEntry) {
+        _queueEntries.update { current ->
+            current.map { if (it.id == updated.id) updated else it }
+        }
+
+        scope.launch {
+            dao.upsertQueueEntry(updated.toEntity())
+
+            val outboxId = "outbox_qe_status_${updated.id}"
+            dao.insertOutboxRecord(
+                OutboxEntity(
+                    id = outboxId,
+                    actionType = "QUEUE_ENTRY",
+                    entityId = updated.id,
+                    payloadJson = gson.toJson(updated)
+                )
+            )
+
+            try {
+                firestoreDataSource.uploadQueueEntry(updated)
+                dao.deleteOutboxRecord(outboxId)
+            } catch (e: Exception) {
+                syncManager.triggerImmediateSync()
+            }
+        }
+    }
+
+    // --- Entity / Model Mappers ---
+
+    private fun QueueEntry.toEntity() = QueueEntryEntity(
+        id = id,
+        doctorId = doctorId,
+        doctorName = doctorName,
+        dateFormatted = dateFormatted,
+        tokenNumber = tokenNumber,
+        provisionalToken = provisionalToken,
+        appointmentId = appointmentId,
+        patientId = patientId,
+        patientName = patientName,
+        source = source,
+        status = status,
+        priorityFlag = priorityFlag,
+        checkedInAt = checkedInAt,
+        calledAt = calledAt,
+        consultationStartedAt = consultationStartedAt,
+        completedAt = completedAt,
+        outcomeNotes = outcomeNotes,
+        isPendingSync = isPendingSync
+    )
+
+    private fun QueueEntryEntity.toModel() = QueueEntry(
+        id = id,
+        doctorId = doctorId,
+        doctorName = doctorName,
+        dateFormatted = dateFormatted,
+        tokenNumber = tokenNumber,
+        provisionalToken = provisionalToken,
+        appointmentId = appointmentId,
+        patientId = patientId,
+        patientName = patientName,
+        source = source,
+        status = status,
+        priorityFlag = priorityFlag,
+        checkedInAt = checkedInAt,
+        calledAt = calledAt,
+        consultationStartedAt = consultationStartedAt,
+        completedAt = completedAt,
+        outcomeNotes = outcomeNotes,
+        isPendingSync = isPendingSync
+    )
+
+    private fun DoctorDaySlotConfig.toEntity() = DoctorDaySlotEntity(
+        id = id,
+        doctorId = doctorId,
+        dateFormatted = dateFormatted,
+        startTime = startTime,
+        endTime = endTime,
+        capacity = capacity,
+        isWalkInOpen = isWalkInOpen
+    )
+
+    private fun DoctorDaySlotEntity.toModel() = DoctorDaySlotConfig(
+        id = id,
+        doctorId = doctorId,
+        dateFormatted = dateFormatted,
+        startTime = startTime,
+        endTime = endTime,
+        capacity = capacity,
+        isWalkInOpen = isWalkInOpen
+    )
+}

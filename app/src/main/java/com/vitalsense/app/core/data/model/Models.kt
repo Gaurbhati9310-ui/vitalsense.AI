@@ -146,3 +146,62 @@ data class GovernmentScheme(
     val eligibility: String,
     val applicationUrl: String = ""
 )
+
+// --- Live Queue & Appointment Models ---
+
+enum class QueueEntrySource {
+    SCHEDULED,
+    WALK_IN
+}
+
+enum class QueueEntryStatus {
+    WAITING,
+    CALLED,
+    IN_CONSULTATION,
+    COMPLETED,
+    NO_SHOW,
+    SKIPPED,
+    CANCELLED
+}
+
+data class DoctorDaySlotConfig(
+    val id: String,
+    val doctorId: String,
+    val dateFormatted: String,       // "yyyy-MM-dd"
+    val startTime: String,           // "HH:mm"
+    val endTime: String,             // "HH:mm"
+    val capacity: Int,               // max scheduled bookings in this block
+    val isWalkInOpen: Boolean = true // whether walk-ins can join today's queue
+)
+
+data class QueueEntry(
+    val id: String,
+    val doctorId: String,
+    val doctorName: String,
+    val dateFormatted: String,
+    val tokenNumber: Int,
+    val provisionalToken: Boolean = false, // true until an offline check-in is reconciled with the server
+    val appointmentId: String? = null,     // null for walk-ins
+    val patientId: String,
+    val patientName: String,
+    val source: QueueEntrySource,
+    val status: QueueEntryStatus,
+    val priorityFlag: Boolean = false,     // doctor-set manual priority bump
+    val checkedInAt: Long,
+    val calledAt: Long? = null,
+    val consultationStartedAt: Long? = null,
+    val completedAt: Long? = null,
+    val outcomeNotes: String? = null,
+    val isPendingSync: Boolean = false
+)
+
+data class DoctorQueueSummary(
+    val doctorId: String,
+    val doctorName: String,
+    val dateFormatted: String,
+    val waitingCount: Int,
+    val currentToken: Int?,
+    val avgWaitSeconds: Long,
+    val isQueueOpen: Boolean
+)
+

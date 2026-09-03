@@ -149,3 +149,37 @@ data class GovernmentSchemeEntity(
     val eligibility: String,
     val applicationUrl: String = ""
 )
+
+@Entity(tableName = "doctor_day_slots")
+data class DoctorDaySlotEntity(
+    @PrimaryKey val id: String,
+    val doctorId: String,
+    val dateFormatted: String,
+    val startTime: String,
+    val endTime: String,
+    val capacity: Int,
+    val isWalkInOpen: Boolean
+)
+
+@Entity(tableName = "queue_entries")
+data class QueueEntryEntity(
+    @PrimaryKey val id: String,
+    val doctorId: String,
+    val doctorName: String,
+    val dateFormatted: String,
+    val tokenNumber: Int,
+    val provisionalToken: Boolean,
+    val appointmentId: String?,
+    val patientId: String,
+    val patientName: String,
+    val source: QueueEntrySource,
+    val status: QueueEntryStatus,
+    val priorityFlag: Boolean,
+    val checkedInAt: Long,
+    val calledAt: Long?,
+    val consultationStartedAt: Long?,
+    val completedAt: Long?,
+    val outcomeNotes: String?,
+    val isPendingSync: Boolean
+)
+

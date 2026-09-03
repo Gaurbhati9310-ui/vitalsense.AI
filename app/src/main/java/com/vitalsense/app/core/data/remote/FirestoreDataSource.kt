@@ -24,6 +24,10 @@ class FirestoreDataSource @Inject constructor(
     private val appointmentsCollection = firestore.collection("appointments")
     private val noticesCollection = firestore.collection("broadcast_notices")
     private val villagesCollection = firestore.collection("villages")
+    private val queueEntriesCollection = firestore.collection("queue_entries")
+    private val doctorSlotsCollection = firestore.collection("doctor_day_slots")
+    private val queueCountersCollection = firestore.collection("queue_counters")
+
 
     init {
         // Ensure an authenticated session for Firestore security rules
@@ -258,4 +262,193 @@ class FirestoreDataSource @Inject constructor(
         }
         awaitClose { listener.remove() }
     }
-}
+
+    // --- LIVE QUEUE & DOCTOR SLOTS OPERATIONS ---
+
+    /**
+     * Atomically allocates the next incremental token for a doctor on a specific date.
+     */
+    suspend fun allocateNextToken(doctorId: String, dateFormatted: String): Int {
+        val counterDocRef = queueCountersCollection.document("${doctorId}_$dateFormatted")
+        return firestore.runTransaction { transaction ->
+            val snapshot = transaction.get(counterDocRef)
+            val currentToken = snapshot.getLong("nextToken")?.toInt() ?: 1
+            transaction.set(counterDocRef, mapOf("nextToken" to (currentToken + 1)))
+            currentToken
+        }.await()
+    }
+
+    suspend fun uploadQueueEntry(entry: QueueEntry) {
+        try {
+            val data = hashMapOf(
+                "id" to entry.id,
+                "doctorId" to entry.doctorId,
+                "doctorName" to entry.doctorName,
+                "dateFormatted" to entry.dateFormatted,
+                "tokenNumber" to entry.tokenNumber,
+                "provisionalToken" to entry.provisionalToken,
+                "appointmentId" to (entry.appointmentId ?: ""),
+                "patientId" to entry.patientId,
+                "patientName" to entry.patientName,
+                "source" to entry.source.name,
+                "status" to entry.status.name,
+                "priorityFlag" to entry.priorityFlag,
+                "checkedInAt" to entry.checkedInAt,
+                "calledAt" to (entry.calledAt ?: 0L),
+                "consultationStartedAt" to (entry.consultationStartedAt ?: 0L),
+                "completedAt" to (entry.completedAt ?: 0L),
+                "outcomeNotes" to (entry.outcomeNotes ?: ""),
+                "isPendingSync" to false
+            )
+            queueEntriesCollection.document(entry.id).set(data).await()
+            Log.d(TAG, "✅ Successfully uploaded queue_entry: ${entry.id} (Token #${entry.tokenNumber})")
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Failed to upload queue_entry: ${e.message}", e)
+            throw e
+        }
+    }
+
+    suspend fun uploadDoctorSlot(slot: DoctorDaySlotConfig) {
+        try {
+            val data = hashMapOf(
+                "id" to slot.id,
+                "doctorId" to slot.doctorId,
+                "dateFormatted" to slot.dateFormatted,
+                "startTime" to slot.startTime,
+                "endTime" to slot.endTime,
+                "capacity" to slot.capacity,
+                "isWalkInOpen" to slot.isWalkInOpen
+            )
+            doctorSlotsCollection.document(slot.id).set(data).await()
+            Log.d(TAG, "✅ Successfully uploaded doctor_day_slot: ${slot.id}")
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Failed to upload doctor_day_slot: ${e.message}", e)
+            throw e
+        }
+    }
+
+    fun observeDoctorQueueStream(doctorId: String, date: String): Flow<List<QueueEntry>> = callbackFlow {
+        val query = queueEntriesCollection
+            .whereEqualTo("doctorId", doctorId)
+            .whereEqualTo("dateFormatted", date)
+
+        val listener = query.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                Log.w(TAG, "Doctor queue stream error: ${error.message}")
+                close(error)
+                return@addSnapshotListener
+            }
+            if (snapshot != null) {
+                val list = snapshot.documents.mapNotNull { doc ->
+                    mapDocToQueueEntry(doc)
+                }.sortedBy { it.checkedInAt }
+                trySend(list)
+            }
+        }
+        awaitClose { listener.remove() }
+    }
+
+    fun observePatientQueueEntryStream(patientId: String, date: String): Flow<QueueEntry?> = callbackFlow {
+        val query = queueEntriesCollection
+            .whereEqualTo("patientId", patientId)
+            .whereEqualTo("dateFormatted", date)
+
+        val listener = query.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                Log.w(TAG, "Patient queue entry stream error: ${error.message}")
+                close(error)
+                return@addSnapshotListener
+            }
+            if (snapshot != null) {
+                val entry = snapshot.documents.firstNotNullOfOrNull { doc ->
+                    mapDocToQueueEntry(doc)
+                }
+                trySend(entry)
+            }
+        }
+        awaitClose { listener.remove() }
+    }
+
+    fun observeDoctorSlotsStream(doctorId: String, date: String): Flow<List<DoctorDaySlotConfig>> = callbackFlow {
+        val query = doctorSlotsCollection
+            .whereEqualTo("doctorId", doctorId)
+            .whereEqualTo("dateFormatted", date)
+
+        val listener = query.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                Log.w(TAG, "Doctor slots stream error: ${error.message}")
+                close(error)
+                return@addSnapshotListener
+            }
+            if (snapshot != null) {
+                val list = snapshot.documents.mapNotNull { doc ->
+                    try {
+                        DoctorDaySlotConfig(
+                            id = doc.getString("id") ?: doc.id,
+                            doctorId = doc.getString("doctorId") ?: "",
+                            dateFormatted = doc.getString("dateFormatted") ?: "",
+                            startTime = doc.getString("startTime") ?: "09:00",
+                            endTime = doc.getString("endTime") ?: "17:00",
+                            capacity = doc.getLong("capacity")?.toInt() ?: 20,
+                            isWalkInOpen = doc.getBoolean("isWalkInOpen") ?: true
+                        )
+                    } catch (e: Exception) {
+                        null
+                    }
+                }
+                trySend(list)
+            }
+        }
+        awaitClose { listener.remove() }
+    }
+
+    fun observeAllQueueEntriesStream(date: String): Flow<List<QueueEntry>> = callbackFlow {
+        val query = queueEntriesCollection.whereEqualTo("dateFormatted", date)
+        val listener = query.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                Log.w(TAG, "All queue entries stream error: ${error.message}")
+                close(error)
+                return@addSnapshotListener
+            }
+            if (snapshot != null) {
+                val list = snapshot.documents.mapNotNull { doc ->
+                    mapDocToQueueEntry(doc)
+                }
+                trySend(list)
+            }
+        }
+        awaitClose { listener.remove() }
+    }
+
+    private fun mapDocToQueueEntry(doc: com.google.firebase.firestore.DocumentSnapshot): QueueEntry? {
+        return try {
+            val sourceStr = doc.getString("source") ?: QueueEntrySource.SCHEDULED.name
+            val statusStr = doc.getString("status") ?: QueueEntryStatus.WAITING.name
+            val source = runCatching { QueueEntrySource.valueOf(sourceStr) }.getOrDefault(QueueEntrySource.SCHEDULED)
+            val status = runCatching { QueueEntryStatus.valueOf(statusStr) }.getOrDefault(QueueEntryStatus.WAITING)
+
+            QueueEntry(
+                id = doc.getString("id") ?: doc.id,
+                doctorId = doc.getString("doctorId") ?: "",
+                doctorName = doc.getString("doctorName") ?: "",
+                dateFormatted = doc.getString("dateFormatted") ?: "",
+                tokenNumber = doc.getLong("tokenNumber")?.toInt() ?: 0,
+                provisionalToken = doc.getBoolean("provisionalToken") ?: false,
+                appointmentId = doc.getString("appointmentId")?.takeIf { it.isNotBlank() },
+                patientId = doc.getString("patientId") ?: "",
+                patientName = doc.getString("patientName") ?: "",
+                source = source,
+                status = status,
+                priorityFlag = doc.getBoolean("priorityFlag") ?: false,
+                checkedInAt = doc.getLong("checkedInAt") ?: System.currentTimeMillis(),
+                calledAt = doc.getLong("calledAt")?.takeIf { it > 0 },
+                consultationStartedAt = doc.getLong("consultationStartedAt")?.takeIf { it > 0 },
+                completedAt = doc.getLong("completedAt")?.takeIf { it > 0 },
+                outcomeNotes = doc.getString("outcomeNotes")?.takeIf { it.isNotBlank() },
+                isPendingSync = false
+            )
+        } catch (e: Exception) {
+            null
+        }
+    }
+}

@@ -5,12 +5,15 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -31,7 +34,7 @@ fun LoginScreen(
     modifier: Modifier = Modifier
 ) {
     val strings = LocalAppStrings.current
-    var selectedRole by remember { mutableStateOf(UserRole.DOCTOR) } // Default to Doctor to showcase Glume UI
+    var selectedRole by remember { mutableStateOf(UserRole.DOCTOR) }
 
     // Form inputs
     var phoneInput by remember { mutableStateOf("") }
@@ -48,10 +51,10 @@ fun LoginScreen(
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .background(GlumeBackground)
+            .background(VitalSenseBackground)
             .padding(horizontal = Spacing.md),
         verticalArrangement = Arrangement.spacedBy(Spacing.md),
-        contentPadding = PaddingValues(top = Spacing.lg, bottom = Spacing.xxl)
+        contentPadding = PaddingValues(top = Spacing.md, bottom = Spacing.xxl)
     ) {
         // 1. App Header & Reactive Language Switcher
         item {
@@ -64,41 +67,42 @@ fun LoginScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .background(GlumePrimaryPurple),
-                        contentAlignment = Alignment.Center
+                    Surface(
+                        shape = CircleShape,
+                        color = VitalSensePrimaryContainer,
+                        modifier = Modifier.size(40.dp)
                     ) {
-                        Text(
-                            text = "V",
-                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                            color = GlumeTextPrimary
-                        )
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.HealthAndSafety,
+                                contentDescription = "VitalSense Logo",
+                                tint = VitalSensePrimary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
                     }
                     Column {
                         Text(
                             text = strings.appName,
-                            style = MaterialTheme.typography.displayMedium,
-                            color = GlumeTextPrimary
+                            style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                            color = VitalSenseTextPrimary
                         )
                         Text(
                             text = strings.tagline,
                             style = MaterialTheme.typography.bodySmall,
-                            color = GlumeTextSecondary
+                            color = VitalSenseTextSecondary
                         )
                     }
                 }
 
-                // Working Language Toggle Pill
+                // Language Toggle Pill
                 Surface(
                     onClick = onToggleLanguage,
                     shape = PillShape,
-                    color = GlumeSurfaceCard,
-                    border = BorderStroke(1.dp, GlumeBorder),
+                    color = VitalSenseSurface,
+                    border = BorderStroke(1.dp, VitalSenseBorder),
                     shadowElevation = 0.dp,
-                    modifier = Modifier.defaultMinSize(minHeight = 40.dp)
+                    modifier = Modifier.defaultMinSize(minHeight = 36.dp)
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = Spacing.sm, vertical = Spacing.xs),
@@ -109,7 +113,7 @@ fun LoginScreen(
                         Text(
                             text = currentLanguage.displayName,
                             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                            color = GlumeTextPrimary
+                            color = VitalSenseTextPrimary
                         )
                     }
                 }
@@ -121,13 +125,13 @@ fun LoginScreen(
             Column(verticalArrangement = Arrangement.spacedBy(Spacing.xxs)) {
                 Text(
                     text = strings.whoIsUsing,
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = GlumeTextPrimary
+                    style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                    color = VitalSenseTextPrimary
                 )
                 Text(
                     text = strings.selectRoleDesc,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = GlumeTextSecondary
+                    color = VitalSenseTextSecondary
                 )
             }
         }
@@ -140,19 +144,17 @@ fun LoginScreen(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
                 ) {
                     RoleCard(
-                        role = UserRole.PATIENT,
                         title = strings.rolePatient,
                         desc = strings.rolePatientDesc,
-                        icon = "👤",
+                        icon = Icons.Default.Person,
                         isSelected = selectedRole == UserRole.PATIENT,
                         onClick = { selectedRole = UserRole.PATIENT },
                         modifier = Modifier.weight(1f)
                     )
                     RoleCard(
-                        role = UserRole.ASHA,
                         title = strings.roleAsha,
                         desc = strings.roleAshaDesc,
-                        icon = "🤝",
+                        icon = Icons.Default.VolunteerActivism,
                         isSelected = selectedRole == UserRole.ASHA,
                         onClick = { selectedRole = UserRole.ASHA },
                         modifier = Modifier.weight(1f)
@@ -163,19 +165,17 @@ fun LoginScreen(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
                 ) {
                     RoleCard(
-                        role = UserRole.DOCTOR,
                         title = strings.roleDoctor,
                         desc = strings.roleDoctorDesc,
-                        icon = "🩺",
+                        icon = Icons.Default.MedicalServices,
                         isSelected = selectedRole == UserRole.DOCTOR,
                         onClick = { selectedRole = UserRole.DOCTOR },
                         modifier = Modifier.weight(1f)
                     )
                     RoleCard(
-                        role = UserRole.ADMIN,
                         title = strings.roleAdmin,
                         desc = strings.roleAdminDesc,
-                        icon = "🛡️",
+                        icon = Icons.Default.AdminPanelSettings,
                         isSelected = selectedRole == UserRole.ADMIN,
                         onClick = { selectedRole = UserRole.ADMIN },
                         modifier = Modifier.weight(1f)
@@ -187,20 +187,39 @@ fun LoginScreen(
         // 4. Role Credentials Form & 1-Tap Demo Login
         item {
             VitalSenseCard(
-                backgroundColor = GlumeSurfaceCard
+                backgroundColor = VitalSenseSurface,
+                border = BorderStroke(1.dp, VitalSenseBorder)
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
-                    Text(
-                        text = when (selectedRole) {
-                            UserRole.PATIENT -> strings.patientSignIn
-                            UserRole.ASHA -> strings.ashaSignIn
-                            UserRole.DOCTOR -> strings.doctorSignIn
-                            UserRole.ADMIN -> strings.adminSignIn
-                        },
-                        style = MaterialTheme.typography.titleLarge,
-                        color = GlumeTextPrimary
-                    )
+                    // Portal Title
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(Spacing.xs)
+                    ) {
+                        Icon(
+                            imageVector = when (selectedRole) {
+                                UserRole.PATIENT -> Icons.Default.Person
+                                UserRole.ASHA -> Icons.Default.VolunteerActivism
+                                UserRole.DOCTOR -> Icons.Default.MedicalServices
+                                UserRole.ADMIN -> Icons.Default.AdminPanelSettings
+                            },
+                            contentDescription = null,
+                            tint = VitalSensePrimary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            text = when (selectedRole) {
+                                UserRole.PATIENT -> strings.patientSignIn
+                                UserRole.ASHA -> strings.ashaSignIn
+                                UserRole.DOCTOR -> strings.doctorSignIn
+                                UserRole.ADMIN -> strings.adminSignIn
+                            },
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                            color = VitalSenseTextPrimary
+                        )
+                    }
 
+                    // Form Fields based on role
                     when (selectedRole) {
                         UserRole.PATIENT -> {
                             VitalSenseTextField(
@@ -213,42 +232,8 @@ fun LoginScreen(
                                 value = ashaIdInput,
                                 onValueChange = { ashaIdInput = it },
                                 label = strings.ashaHelperIdOptional,
-                                placeholder = "e.g. ASHA-7701"
+                                placeholder = "e.g. ASHA-RAMPUR-01"
                             )
-                            VitalSenseButton(
-                                text = strings.logInAsPatient,
-                                onClick = { onPatientLogin(samplePatients.first()) },
-                                style = ButtonStyle.PRIMARY
-                            )
-
-                            // 1-Tap Demo Logins for Evaluators
-                            Text(
-                                text = strings.quickDemoLogin,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = GlumeTextSecondary
-                            )
-                            samplePatients.forEach { patient ->
-                                Surface(
-                                    onClick = { onPatientLogin(patient) },
-                                    shape = PillShape,
-                                    color = GlumeSurfaceElevated,
-                                    border = BorderStroke(1.dp, GlumeBorder),
-                                    modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 44.dp)
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.xs),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text(
-                                            text = "${patient.name} (${patient.villageName})",
-                                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                                            color = GlumeTextPrimary
-                                        )
-                                        SeverityBadge(severity = patient.currentRiskLevel)
-                                    }
-                                }
-                            }
                         }
 
                         UserRole.ASHA -> {
@@ -256,52 +241,15 @@ fun LoginScreen(
                                 value = ashaIdInput,
                                 onValueChange = { ashaIdInput = it },
                                 label = strings.uniqueAshaId,
-                                placeholder = "e.g. ASHA-7701"
+                                placeholder = "e.g. ASHA-RAMPUR-01"
                             )
                             VitalSenseTextField(
                                 value = pinInput,
                                 onValueChange = { pinInput = it },
                                 label = strings.securityPin,
-                                placeholder = "••••",
-                                visualTransformation = PasswordVisualTransformation()
+                                placeholder = "4-digit PIN",
+                                isPassword = true
                             )
-                            VitalSenseButton(
-                                text = strings.logInAsAsha,
-                                onClick = { onAshaLogin(sampleAshas.first()) },
-                                style = ButtonStyle.PRIMARY
-                            )
-
-                            Text(
-                                text = strings.quickDemoLogin,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = GlumeTextSecondary
-                            )
-                            sampleAshas.forEach { asha ->
-                                Surface(
-                                    onClick = { onAshaLogin(asha) },
-                                    shape = PillShape,
-                                    color = GlumeSurfaceElevated,
-                                    border = BorderStroke(1.dp, GlumeBorder),
-                                    modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 44.dp)
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.xs),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text(
-                                            text = "${asha.name} (${asha.ashaUniqueId})",
-                                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                                            color = GlumeTextPrimary
-                                        )
-                                        Text(
-                                            text = "${asha.activePatientCount} patients",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = GlumeTextSecondary
-                                        )
-                                    }
-                                }
-                            }
                         }
 
                         UserRole.DOCTOR -> {
@@ -309,52 +257,15 @@ fun LoginScreen(
                                 value = doctorEmailInput,
                                 onValueChange = { doctorEmailInput = it },
                                 label = strings.doctorEmail,
-                                placeholder = "dr.rajesh@vitalsense.org"
+                                placeholder = "doctor.varma@vitalsense.in"
                             )
                             VitalSenseTextField(
                                 value = doctorPasswordInput,
                                 onValueChange = { doctorPasswordInput = it },
                                 label = strings.password,
                                 placeholder = "••••••••",
-                                visualTransformation = PasswordVisualTransformation()
+                                isPassword = true
                             )
-                            VitalSenseButton(
-                                text = strings.logInAsDoctor,
-                                onClick = { onDoctorLogin(sampleDoctors.first()) },
-                                style = ButtonStyle.PRIMARY
-                            )
-
-                            Text(
-                                text = strings.quickDemoLogin,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = GlumeTextSecondary
-                            )
-                            sampleDoctors.forEach { doc ->
-                                Surface(
-                                    onClick = { onDoctorLogin(doc) },
-                                    shape = PillShape,
-                                    color = GlumeSurfaceElevated,
-                                    border = BorderStroke(1.dp, GlumeBorder),
-                                    modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 44.dp)
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.xs),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text(
-                                            text = doc.name,
-                                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                                            color = GlumeTextPrimary
-                                        )
-                                        Text(
-                                            text = doc.specialty.displayName,
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = GlumePrimaryPurpleLight
-                                        )
-                                    }
-                                }
-                            }
                         }
 
                         UserRole.ADMIN -> {
@@ -362,41 +273,158 @@ fun LoginScreen(
                                 value = adminPasscodeInput,
                                 onValueChange = { adminPasscodeInput = it },
                                 label = strings.adminPasscode,
-                                placeholder = "ADMIN-RAMPUR-2026",
-                                visualTransformation = PasswordVisualTransformation()
+                                placeholder = "District Officer Passcode",
+                                isPassword = true
                             )
-                            VitalSenseButton(
-                                text = strings.logInAsAdmin,
-                                onClick = onAdminLogin,
-                                style = ButtonStyle.PRIMARY
-                            )
+                        }
+                    }
 
-                            Text(
-                                text = strings.quickDemoLogin,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = GlumeTextSecondary
-                            )
+                    // Primary Submit Button
+                    VitalSenseButton(
+                        text = when (selectedRole) {
+                            UserRole.PATIENT -> strings.logInAsPatient
+                            UserRole.ASHA -> strings.logInAsAsha
+                            UserRole.DOCTOR -> strings.logInAsDoctor
+                            UserRole.ADMIN -> strings.logInAsAdmin
+                        } + " →",
+                        onClick = {
+                            when (selectedRole) {
+                                UserRole.PATIENT -> onPatientLogin(samplePatients.first())
+                                UserRole.ASHA -> onAshaLogin(sampleAshas.first())
+                                UserRole.DOCTOR -> onDoctorLogin(sampleDoctors.first())
+                                UserRole.ADMIN -> onAdminLogin()
+                            }
+                        },
+                        style = ButtonStyle.PRIMARY
+                    )
+
+                    HorizontalDivider(color = VitalSenseBorderSubtle)
+
+                    // 1-Tap Quick Demo Profile Logins
+                    Text(
+                        text = "⚡ " + strings.quickDemoLogin,
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        color = VitalSenseTextSecondary
+                    )
+
+                    when (selectedRole) {
+                        UserRole.PATIENT -> {
+                            samplePatients.take(3).forEach { patient ->
+                                Surface(
+                                    onClick = { onPatientLogin(patient) },
+                                    shape = PillShape,
+                                    color = VitalSenseSurfaceSubtle,
+                                    border = BorderStroke(1.dp, VitalSenseBorder),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = Spacing.md, vertical = Spacing.xs),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = patient.name,
+                                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+                                            color = VitalSenseTextPrimary
+                                        )
+                                        Text(
+                                            text = "${patient.villageName} (${patient.gender.firstOrNull() ?: 'P'}/${patient.age}y)",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = VitalSenseTextSecondary
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        UserRole.ASHA -> {
+                            sampleAshas.forEach { asha ->
+                                Surface(
+                                    onClick = { onAshaLogin(asha) },
+                                    shape = PillShape,
+                                    color = VitalSenseSurfaceSubtle,
+                                    border = BorderStroke(1.dp, VitalSenseBorder),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = Spacing.md, vertical = Spacing.xs),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = asha.name,
+                                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+                                            color = VitalSenseTextPrimary
+                                        )
+                                        Text(
+                                            text = "${asha.assignedVillages.firstOrNull() ?: "Rampur"} · ${asha.ashaUniqueId}",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = VitalSenseTextSecondary
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        UserRole.DOCTOR -> {
+                            sampleDoctors.forEach { doc ->
+                                Surface(
+                                    onClick = { onDoctorLogin(doc) },
+                                    shape = PillShape,
+                                    color = VitalSenseSurfaceSubtle,
+                                    border = BorderStroke(1.dp, VitalSenseBorder),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = Spacing.md, vertical = Spacing.xs),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = doc.name,
+                                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+                                            color = VitalSenseTextPrimary
+                                        )
+                                        Text(
+                                            text = doc.specialty.displayName,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = VitalSensePrimary
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        UserRole.ADMIN -> {
                             Surface(
                                 onClick = onAdminLogin,
                                 shape = PillShape,
-                                color = GlumeSurfaceElevated,
-                                border = BorderStroke(1.dp, GlumeBorder),
-                                modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 44.dp)
+                                color = VitalSenseSurfaceSubtle,
+                                border = BorderStroke(1.dp, VitalSenseBorder),
+                                modifier = Modifier.fillMaxWidth()
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(horizontal = Spacing.md, vertical = Spacing.xs),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = Spacing.md, vertical = Spacing.xs),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = "District Chief Medical Officer (Rampur)",
-                                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                                        color = GlumeTextPrimary
+                                        text = "District Health Officer (Rampur)",
+                                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+                                        color = VitalSenseTextPrimary
                                     )
                                     Text(
-                                        text = "Full Access",
-                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                        color = GlumeSuccessText
+                                        text = "CMO Clearance",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = VitalSensePrimary
                                     )
                                 }
                             }
@@ -406,17 +434,19 @@ fun LoginScreen(
             }
         }
 
-        // 5. Offline resilience badge
+        // 5. Offline-First Reassurance Banner
         item {
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = Spacing.xs),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = strings.offlineBanner,
+                    text = "📶 " + strings.offlineBanner,
                     style = MaterialTheme.typography.labelSmall,
-                    color = GlumeTextSecondary
+                    color = VitalSenseTextSecondary
                 )
             }
         }
@@ -425,56 +455,70 @@ fun LoginScreen(
 
 @Composable
 private fun RoleCard(
-    role: UserRole,
     title: String,
     desc: String,
-    icon: String,
+    icon: ImageVector,
     isSelected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Surface(
         onClick = onClick,
-        modifier = modifier.defaultMinSize(minHeight = 90.dp),
+        modifier = modifier.defaultMinSize(minHeight = 84.dp),
         shape = CardShape,
-        color = if (isSelected) GlumePrimaryPurpleContainer else GlumeSurfaceCard,
-        shadowElevation = 0.dp,
-        border = if (isSelected) BorderStroke(1.5.dp, GlumePrimaryPurple) else BorderStroke(1.dp, GlumeBorder)
+        color = if (isSelected) VitalSensePrimaryContainer else VitalSenseSurface,
+        border = BorderStroke(
+            1.5.dp,
+            if (isSelected) VitalSensePrimary else VitalSenseBorder
+        ),
+        shadowElevation = 0.dp
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(Spacing.sm),
-            verticalArrangement = Arrangement.spacedBy(Spacing.xs)
+            modifier = Modifier.padding(Spacing.sm),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = icon, style = MaterialTheme.typography.titleLarge)
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = if (isSelected) VitalSensePrimary else VitalSenseTextSecondary,
+                    modifier = Modifier.size(20.dp)
+                )
+
                 if (isSelected) {
-                    Box(
-                        modifier = Modifier
-                            .size(20.dp)
-                            .clip(CircleShape)
-                            .background(GlumePrimaryPurple),
-                        contentAlignment = Alignment.Center
+                    Surface(
+                        shape = CircleShape,
+                        color = VitalSensePrimary,
+                        modifier = Modifier.size(16.dp)
                     ) {
-                        Text(text = "✓", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(10.dp)
+                            )
+                        }
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(Spacing.xxs))
+
             Column {
                 Text(
                     text = title,
                     style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                    color = if (isSelected) GlumePrimaryPurpleLight else GlumeTextPrimary
+                    color = if (isSelected) VitalSensePrimary else VitalSenseTextPrimary
                 )
                 Text(
                     text = desc,
                     style = MaterialTheme.typography.labelSmall,
-                    color = GlumeTextSecondary,
+                    color = VitalSenseTextSecondary,
                     maxLines = 1
                 )
             }

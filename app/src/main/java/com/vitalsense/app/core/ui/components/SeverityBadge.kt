@@ -18,16 +18,16 @@ fun SeverityBadge(
     modifier: Modifier = Modifier
 ) {
     val (backgroundColor, textColor) = when (severity) {
-        SeverityLevel.LOW -> GlumeSuccessContainer to GlumeSuccessText
-        SeverityLevel.MODERATE -> GlumeWarningContainer to GlumeWarningAmber
-        SeverityLevel.HIGH -> GlumeAlertContainer to GlumeAlertCoral
-        SeverityLevel.SEVERE -> GlumeAlertCoral.copy(alpha = 0.35f) to GlumeAlertText
+        SeverityLevel.LOW -> VitalSenseSuccessContainer to VitalSenseSuccessText
+        SeverityLevel.MODERATE -> VitalSenseWarningContainer to VitalSenseWarningText
+        SeverityLevel.HIGH -> VitalSenseEmergencyContainer to VitalSenseEmergencyText
+        SeverityLevel.SEVERE -> VitalSenseEmergencyContainer to VitalSenseEmergency
     }
 
     Surface(
         shape = PillShape,
         color = backgroundColor,
-        border = BorderStroke(1.dp, textColor.copy(alpha = 0.3f)),
+        border = BorderStroke(1.dp, textColor.copy(alpha = 0.25f)),
         modifier = modifier
     ) {
         Text(

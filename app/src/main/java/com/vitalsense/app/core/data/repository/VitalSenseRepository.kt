@@ -59,4 +59,22 @@ interface VitalSenseRepository {
 
     // --- Emergency SOS ---
     suspend fun triggerEmergencySos(patient: Patient, locationLat: Double?, locationLng: Double?): Boolean
+
+    // --- Live Queue & Doctor Slots ---
+    fun observeDoctorQueue(doctorId: String, date: String): Flow<List<QueueEntry>>
+    fun observePatientQueueEntry(patientId: String, date: String): Flow<QueueEntry?>
+    fun observeDoctorSlots(doctorId: String, date: String): Flow<List<DoctorDaySlotConfig>>
+    fun observeAllDoctorQueueSummaries(date: String): Flow<List<DoctorQueueSummary>>
+
+    suspend fun defineDoctorSlot(slot: DoctorDaySlotConfig)
+    suspend fun checkInAppointment(appointmentId: String): QueueEntry
+    suspend fun joinWalkInQueue(doctorId: String, patientId: String, patientName: String): QueueEntry
+    suspend fun callNext(doctorId: String, date: String)
+    suspend fun startConsultation(entryId: String)
+    suspend fun completeConsultation(entryId: String, outcomeNotes: String?)
+    suspend fun markNoShow(entryId: String)
+    suspend fun skipEntry(entryId: String)
+    suspend fun prioritizeEntry(entryId: String)
+    suspend fun cancelQueueEntry(entryId: String)
 }
+
